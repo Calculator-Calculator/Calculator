@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آلة حاسبة</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        body { 
+            background: #f7f7f7; 
+            color: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: auto;
+        }
+        .calc-container { 
+            background: #f7f7f7; 
+            padding: 15px 20px; 
+            width: 100%;
+            max-width: 440px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            position: relative;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+        }
+        .top-bar .icon {
+            font-size: 22px;
+            color: #555;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+        }
+        .top-bar .icon:active { background: #e0e0e0; }
+        .right-icons { display: flex; gap: 10px; }
+
+        .display-container {
+            width: 100%;
+            height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            padding: 0 10px;
+            margin: 10px 0;
+            flex-shrink: 0;
+        }
+        #display { 
+            width: 100%; 
+            font-size: 44px; 
+            text-align: right; 
+            direction: ltr;
+            background: transparent; 
+            color: #222; 
+            border: none; 
+            outline: none;
+            font-weight: 300;
+        }
+        #preview {
+            width: 100%;
+            font-size: 24px;
+            text-align: right;
+            direction: ltr;
+            color: #999;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-weight: 300;
+            min-height: 30px;
+        }
+
+        .keypads-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: 20px;
+            gap: 12px;
+        }
+
+        .sci-panel {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            direction: ltr;
+        }
+        .sci-panel button {
+            height: 46px;
+            font-size: 16px;
+            border-radius: 23px;
+            background: #e5e8f3;
+            color: #2b2d35;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .sci-panel button:active { background: #d3d8ea; }
+        .sci-panel button.active-mode {
+            background: #cfd6ec;
+            color: #1a56db;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            direction: ltr;
+        }
+        .buttons button { 
+            height: 68px; 
+            font-size: 26px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 50%; 
+            background: #ffffff; 
+            color: #111;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .buttons button:active { background: #e8e8e8; }
+        .buttons .operator { background: #eaeaea; color: #333; }
+        .buttons .equal { background: #22ab63; color: white; }
+        .buttons .equal:active { background: #1b8a50; }
+        .buttons .clear { color: #f44336; background: #ffffff; }
+        
+        .backspace-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 30px;
+            height: 22px;
+            border: 2px solid #f44336;
+            border-radius: 4px;
+            position: relative;
+        }
+        .backspace-box span {
+            color: #f44336;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .modal {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff;
+            z-index: 20;
+            flex-direction: column;
+            padding: 25px;
+        }
+        .modal h3 { margin-top: 0; color: #222; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .modal-content { flex-grow: 1; overflow-y: auto; }
+        .conv-box { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+        .conv-box input, .conv-box select {
+            padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 10px; width: 100%;
+        }
+        .conv-result {
+            background: #f0fdf4; color: #166534; padding: 15px;
+            border-radius: 10px; font-size: 18px; font-weight: bold; text-align: center;
+        }
+        .close-btn {
+            background: #f44336; color: white; border: none; padding: 14px;
+            font-size: 18px; border-radius: 12px; cursor: pointer; margin-top: 15px;
+        }
+        .history-item {
+            padding: 10px; border-bottom: 1px solid #eee; font-size: 20px; direction: ltr; text-align: right;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calc-container">
+        <!-- الشريط العلوي -->
+        <div class="top-bar">
+            <span class="icon" onclick="openHistory()" title="السجل">🕒</span>
+            <div class="right-icons">
+                <span class="icon" onclick="openConverter()" title="محول الوحدات">📏</span>
+                <span class="icon" onclick="toggleScientific()" title="الحاسبة العلمية">√</span>
+            </div>
+        </div>
+
+        <!-- الشاشة المزدوجة -->
+        <div class="display-container">
+            <input type="text" id="display" readonly value="0">
+            <input type="text" id="preview" readonly value="">
+        </div>
+
+        <div class="keypads-area">
+            <!-- لوحة الأزرار العلمية الـ 16 -->
+            <div class="sci-panel" id="sciPanel">
+                <button id="swapBtn" onclick="toggleInverse()">⇆</button>
+                <button id="angleBtn" onclick="toggleAngleMode()">Rad</button>
+                <button onclick="press('√(')">√</button>
+                <button onclick="press('abs(')">|x|</button>
+                
+                <button id="sinBtn" onclick="pressTrig('sin')">sin</button>
+                <button id="cosBtn" onclick="pressTrig('cos')">cos</button>
+                <button id="tanBtn" onclick="pressTrig('tan')">tan</button>
+                <button onclick="press('π')">π</button>
+                
+                <button id="lnBtn" onclick="press('ln(')">ln</button>
+                <button id="logBtn" onclick="press('log(')">log</button>
+                <button onclick="press('1÷')">1/x</button>
+                <button onclick="press('e')">e</button>
+                
+                <button onclick="press('e^(')">e<sup>x</sup></button>
+                <button onclick="press('^2')">x<sup>2</sup></button>
+                <button onclick="press('^')">x<sup>y</sup></button>
+                <button onclick="toggleSign()">+/-</button>
+            </div>
+            
+            <!-- الأزرار الأساسية -->
+            <div class="buttons">
+                <button class="clear" onclick="clearCalc()">C</button>
+                <button class="clear" onclick="backspace()">
+                    <div class="backspace-box"><span>×</span></div>
+                </button>
+                <button class="operator" onclick="press('%')">%</button>
+                <button class="operator" onclick="press('÷')">÷</button>
+                
+                <button onclick="press('7')">7</button>
+                <button onclick="press('8')">8</button>
+                <button onclick="press('9')">9</button>
+                <button class="operator" onclick="press('×')">×</button>
+                
+                <button onclick="press('4')">4</button>
+                <button onclick="press('5')">5</button>
+                <button onclick="press('6')">6</button>
+                <button class="operator" onclick="press('-')">-</button>
+                
+                <button onclick="press('1')">1</button>
+                <button onclick="press('2')">2</button>
+                <button onclick="press('3')">3</button>
+                <button class="operator" onclick="press('+')">+</button>
+                
+                <button class="operator" onclick="toggleBracket()">( )</button>
+                <button onclick="press('0')">0</button>
+                <button onclick="press('.')">.</button>
+                <button class="equal" onclick="calculate()">=</button>
+            </div>
+        </div>
+
+        <!-- نافذة السجل -->
+        <div id="historyModal" class="modal">
+            <h3>🕒 سجل العمليات</h3>
+            <div id="historyList" class="modal-content">لا توجد عمليات سابقة.</div>
+            <button class="close-btn" onclick="closeModals()">إغلاق</button>
+        </div>
+
+        <!-- نافذة محول الوحدات -->
+        <div id="converterModal" class="modal">
+            <h3>📏 محول الوحدات الشامل</h3>
+            <div class="modal-content">
+                <div class="conv-box">
+                    <label>اختر نوع التحويل:</label>
+                    <select id="convCategory" onchange="updateUnitsList()">
+                        <option value="length">الطول والمسافات (كم، متر، سم، مم)</option>
+                        <option value="weight">الوزن والكتلة (طن، كغ، غرام)</option>
+                        <option value="area">المساحة (كم²، دونم، م²)</option>
+                    </select>
+
+                    <label>من وحدة:</label>
+                    <select id="fromUnit" onchange="convertEverything()"></select>
+
+                    <label>إلى وحدة:</label>
+                    <select id="toUnit" onchange="convertEverything()"></select>
+
+                    <label>القيمة:</label>
+                    <input type="number" id="convInput" placeholder="أدخل الرقم..." oninput="convertEverything()">
+
+                    <div class="conv-result" id="convOutput">النتيجة: 0</div>
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeModals()">إغلاق</button>
+        </div>
+    </div>
+
+    <script>
+        let openBracket = false;
+        let historyLog = [];
+        let isInitialZero = true;
+        let isRad = true;
+        let isInverse = false;
+
+        function press(val) {
+            let display = document.getElementById('display');
+            if (isInitialZero) {
+                display.value = val;
+                isInitialZero = false;
+            } else {
+                display.value += val;
+            }
+            updatePreview();
+        }
+
+        function pressTrig(func) {
+            if (isInverse) {
+                press('a' + func + '(');
+            } else {
+                press(func + '(');
+            }
+        }
+
+        function toggleInverse() {
+            isInverse = !isInverse;
+            let swapBtn = document.getElementById('swapBtn');
+            swapBtn.classList.toggle('active-mode', isInverse);
+            
+            document.getElementById('sinBtn').innerHTML = isInverse ? 'sin<sup>-1</sup>' : 'sin';
+            document.getElementById('cosBtn').innerHTML = isInverse ? 'cos<sup>-1</sup>' : 'cos';
+            document.getElementById('tanBtn').innerHTML = isInverse ? 'tan<sup>-1</sup>' : 'tan';
+        }
+
+        function toggleAngleMode() {
+            isRad = !isRad;
+            let btn = document.getElementById('angleBtn');
+            btn.innerText = isRad ? 'Rad' : 'Deg';
+            btn.classList.toggle('active-mode', !isRad);
+        }
+
+        function toggleSign() {
+            let display = document.getElementById('display');
+            if (display.value === '0') return;
+            if (display.value.startsWith('-')) {
+                display.value = display.value.slice(1);
+            } else {
+                display.value = '-' + display.value;
+            }
+            isInitialZero = false;
+            updatePreview();
+        }
+
+        function toggleBracket() {
+            if (!openBracket) {
+                press('(');
+                openBracket = true;
+            } else {
+                press(')');
+                openBracket = false;
+            }
+        }
+
+        function clearCalc() {
+            document.getElementById('display').value = '0';
+            document.getElementById('preview').value = '';
+            isInitialZero = true;
+            openBracket = false;
+        }
+
+        function backspace() {
+            let display = document.getElementById('display');
+            display.value = display.value.slice(0, -1);
+            if (display.value === '') {
+                display.value = '0';
+                isInitialZero = true;
+            }
+            updatePreview();
+        }
+
+        function calcSin(x) { return isRad ? Math.sin(x) : Math.sin(x * Math.PI / 180); }
+        function calcCos(x) { return isRad ? Math.cos(x) : Math.cos(x * Math.PI / 180); }
+        function calcTan(x) { return isRad ? Math.tan(x) : Math.tan(x * Math.PI / 180); }
+        function calcAsin(x) { let r = Math.asin(x); return isRad ? r : r * 180 / Math.PI; }
+        function calcAcos(x) { let r = Math.acos(x); return isRad ? r : r * 180 / Math.PI; }
+        function calcAtan(x) { let r = Math.atan(x); return isRad ? r : r * 180 / Math.PI; }
+
+        function updatePreview() {
+            let val = document.getElementById('display').value;
+            if (val === '0' || val === '') {
+                document.getElementById('preview').value = '';
+                return;
+            }
+            try {
+                let openCount = (val.match(/\(/g) || []).length;
+                let closeCount = (val.match(/\)/g) || []).length;
+                let fixedVal = val + ')'.repeat(Math.max(0, openCount - closeCount));
+
+                let computeVal = fixedVal
+                    .replace(/×/g, '*')
+                    .replace(/÷/g, '/')
+                    .replace(/√\(/g, 'Math.sqrt(')
+                    .replace(/abs\(/g, 'Math.abs(')
+                    .replace(/asin\(/g, 'calcAsin(')
+                    .replace(/acos\(/g, 'calcAcos(')
+                    .replace(/atan\(/g, 'calcAtan(')
+                    .replace(/\bsin\(/g, 'calcSin(')
+                    .replace(/\bcos\(/g, 'calcCos(')
+                    .replace(/\btan\(/g, 'calcTan(')
+                    .replace(/ln\(/g, 'Math.log(')
+                    .replace(/log\(/g, 'Math.log10(')
+                    .replace(/\^/g, '**')
+                    .replace(/π/g, 'Math.PI')
+                    .replace(/\be\b/g, 'Math.E')
+                    .replace(/%/g, '/100');
+
+                let res = eval(computeVal);
+                if (!isNaN(res) && isFinite(res)) {
+                    document.getElementById('preview').value = Math.round(res * 100000000) / 100000000;
+                } else {
+                    document.getElementById('preview').value = '';
+                }
+            } catch (e) {
+                document.getElementById('preview').value = '';
+            }
+        }
+
+        function calculate() {
+            let val = document.getElementById('display').value;
+            
+            // كلمة السر السرية (0000) لموقع الألعاب
+            if (val === '0000') {
+                window.location.href = 'https://www.poki.com';
+                return;
+            }
+
+            try {
+                let openCount = (val.match(/\(/g) || []).length;
+                let closeCount = (val.match(/\)/g) || []).length;
+                let fixedVal = val + ')'.repeat(Math.max(0, openCount - closeCount));
+
+                let computeVal = fixedVal
+                    .replace(/×/g, '*')
+                    .replace(/÷/g, '/')
+                    .replace(/√\(/g, 'Math.sqrt(')
+                    .replace(/abs\(/g, 'Math.abs(')
+                    .replace(/asin\(/g, 'calcAsin(')
+                    .replace(/acos\(/g, 'calcAcos(')
+                    .replace(/atan\(/g, 'calcAtan(')
+                    .replace(/\bsin\(/g, 'calcSin(')
+                    .replace(/\bcos\(/g, 'calcCos(')
+                    .replace(/\btan\(/g, 'calcTan(')
+                    .replace(/ln\(/g, 'Math.log(')
+                    .replace(/log\(/g, 'Math.log10(')
+                    .replace(/\^/g, '**')
+                    .replace(/π/g, 'Math.PI')
+                    .replace(/\be\b/g, 'Math.E')
+                    .replace(/%/g, '/100');
+
+                let result = eval(computeVal);
+                result = Math.round(result * 100000000) / 100000000;
+
+                historyLog.unshift(fixedVal + " = " + result);
+                document.getElementById('display').value = result;
+                document.getElementById('preview').value = '';
+                isInitialZero = true;
+                openBracket = false;
+            } catch (e) {
+                document.getElementById('display').value = 'خطأ';
+                document.getElementById('preview').value = '';
+                isInitialZero = true;
+                openBracket = false;
+            }
+        }
+
+        function toggleScientific() {
+            let panel = document.getElementById('sciPanel');
+            panel.style.display = (panel.style.display === 'grid') ? 'none' : 'grid';
+        }
+
+        function openHistory() {
+            let list = document.getElementById('historyList');
+            if (historyLog.length > 0) {
+                list.innerHTML = historyLog.map(item => `<div class="history-item">${item}</div>`).join('');
+            } else {
+                list.innerHTML = "<p>لا توجد عمليات سابقة حتى الآن.</p>";
+            }
+            document.getElementById('historyModal').style.display = 'flex';
+        }
+
+        function openConverter() {
+            document.getElementById('converterModal').style.display = 'flex';
+            updateUnitsList();
+        }
+
+        const unitsData = {
+            length: { name: "الطول", units: { km: 1000, m: 1, cm: 0.01, mm: 0.001 } },
+            weight: { name: "الوزن", units: { ton: 1000000, kg: 1000, g: 1 } },
+            area: { name: "المساحة", units: { km2: 1000000, dunum: 1000, m2: 1 } }
+        };
+
+        function updateUnitsList() {
+            let cat = document.getElementById('convCategory').value;
+            let fromSelect = document.getElementById('fromUnit');
+            let toSelect = document.getElementById('toUnit');
+            
+            fromSelect.innerHTML = "";
+            toSelect.innerHTML = "";
+
+            let units = unitsData[cat].units;
+            for (let u in units) {
+                fromSelect.innerHTML += `<option value="${u}">${u}</option>`;
+                toSelect.innerHTML += `<option value="${u}">${u}</option>`;
+            }
+            toSelect.selectedIndex = 1;
+            convertEverything();
+        }
+
+        function convertEverything() {
+            let cat = document.getElementById('convCategory').value;
+            let from = document.getElementById('fromUnit').value;
+            let to = document.getElementById('toUnit').value;
+            let val = parseFloat(document.getElementById('convInput').value) || 0;
+
+            let units = unitsData[cat].units;
+            let valueInBase = val * units[from];
+            let finalResult = valueInBase / units[to];
+
+            document.getElementById('convOutput').innerText = "النتيجة: " + finalResult + " " + to;
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+    </script>
+
+</body>
+</html>
